@@ -10,7 +10,6 @@ BOT_TOKEN = os.environ.get("BOT_TOKEN", "TU_BOT_TOKEN_AQUI")
 GROUP_ID = -1004353226044
 MIN_FICHAS = 5
 PRECIO_POR_FICHA = 1
-
 TELEGRAM_API = f"https://api.telegram.org/bot{BOT_TOKEN}"
 
 USERS = {}
@@ -26,16 +25,9 @@ PEDIDOS = {}
 
 def enviar_telegram(texto, pedido_id, es_retiro=False):
     if BOT_TOKEN == "TU_BOT_TOKEN_AQUI":
-        print("DEMO - No hay BOT_TOKEN")
         return False
     boton = "✅ CONFIRMAR RETIRO" if es_retiro else "✅ CONFIRMAR"
-    payload = {
-        "chat_id": GROUP_ID,
-        "text": texto,
-        "reply_markup": {
-            "inline_keyboard": [[{"text": boton, "callback_data": f"confirmar_{pedido_id}"}]]
-        }
-    }
+    payload = {"chat_id": GROUP_ID, "text": texto, "reply_markup": {"inline_keyboard": [[{"text": boton, "callback_data": f"confirmar_{pedido_id}"}]]}}
     try:
         r = requests.post(f"{TELEGRAM_API}/sendMessage", json=payload, timeout=10)
         return r.ok
@@ -50,11 +42,7 @@ def enviar_foto_telegram(photo_path, caption, pedido_id, es_retiro=False):
     try:
         with open(photo_path, "rb") as f:
             files = {"photo": f}
-            data = {
-                "chat_id": GROUP_ID,
-                "caption": caption,
-                "reply_markup": json.dumps({"inline_keyboard": [[{"text": boton, "callback_data": f"confirmar_{pedido_id}"}]]})
-            }
+            data = {"chat_id": GROUP_ID, "caption": caption, "reply_markup": json.dumps({"inline_keyboard": [[{"text": boton, "callback_data": f"confirmar_{pedido_id}"}]]})}
             r = requests.post(f"{TELEGRAM_API}/sendPhoto", data=data, files=files, timeout=20)
             return r.ok
     except Exception as e:
@@ -115,13 +103,12 @@ def api_recarga():
     total = cantidad * PRECIO_POR_FICHA
     texto = f"🧾 NUEVA RECARGA\n👤 Usuario: {user['nombre']}\n🆔 ID: {uid}\n💰 Fichas: {cantidad}\n💵 Total: {total} CUP\n📱 Móvil: {movil}\nPedido: {pedido_id}\n\n1 ficha = 1 CUP"
     foto = request.files.get("captura")
-    enviado = False
     if foto and foto.filename:
         path = f"/tmp/{pedido_id}.jpg"
         foto.save(path)
         enviado = enviar_foto_telegram(path, texto, pedido_id, es_retiro=False)
         if not enviado:
-            enviar_telegram(texto + "\n\nLa captura no se pudo enviar", pedido_id)
+            enviar_telegram(texto, pedido_id)
     else:
         enviar_telegram(texto, pedido_id)
     return jsonify({"ok": True, "pedido": pedido_id})
@@ -158,7 +145,7 @@ def webhook():
             pedido_id = data.replace("confirmar_", "")
             pedido = PEDIDOS.get(pedido_id)
             if not pedido:
-                answer_callback(cb["id"], "Pedido no encontrado o ya procesado")
+                answer_callback(cb["id"], "Pedido no encontrado")
                 return jsonify({"ok": True})
             if pedido["estado"] != "pendiente":
                 answer_callback(cb["id"], "Ya fue confirmado")
@@ -179,10 +166,7 @@ def webhook():
             pedido["estado"] = "confirmado"
             answer_callback(cb["id"], "Confirmado ✅")
             try:
-                requests.post(f"{TELEGRAM_API}/editMessageText", json={
-                    "chat_id": chat_id, "message_id": message_id,
-                    "text": cb["message"].get("text", "") + f"\n\n{msg}"
-                }, timeout=10)
+                requests.post(f"{TELEGRAM_API}/editMessageText", json={"chat_id": chat_id, "message_id": message_id, "text": cb["message"].get("text", "") + f"\n\n{msg}"}, timeout=10)
             except Exception as e:
                 print(e)
             return jsonify({"ok": True})
@@ -208,5 +192,5 @@ def confirmar_manual(pedido_id):
     return jsonify({"ok": True, "user": user})
 
 if __name__ == "__main__":
-    print("Cubadomino corriendo en http://localhost:5000")
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
