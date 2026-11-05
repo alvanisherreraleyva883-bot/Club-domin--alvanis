@@ -5,19 +5,18 @@ import requests
 app = Flask(__name__)
 
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
-GROUP_ID = os.environ.get("GROUP_ID", "")
+GROUP_ID = os.environ.get("GROUP_ID", "") or "-1004353226044"
 ADMIN_ID = os.environ.get("ADMIN_ID", "")
 BASE_URL = os.environ.get("BASE_URL", "https://club-domin--alvanis.onrender.com")
 
 TELEGRAM_API = f"https://api.telegram.org/bot{BOT_TOKEN}"
 
 # ============ DATOS ============
-USUARIOS = {}  # user_id -> {nombre, saldo, telefono}
+USUARIOS = {}
 PEDIDOS = {}
 MESAS = {}
 PARTIDAS = {}
 
-# 16 mesas: 5,10,20,50,100,200,500,1000 x2
 APUESTAS = [5,10,20,50,100,200,500,1000]
 for apuesta in APUESTAS:
     for n in [1,2]:
@@ -29,7 +28,9 @@ MOVIL_CONFIRMAR = "55348244"
 
 def tg(method, data):
     try:
-        return requests.post(f"{TELEGRAM_API}/{method}", json=data, timeout=10).json()
+        r = requests.post(f"{TELEGRAM_API}/{method}", json=data, timeout=10).json()
+        print("TG", method, r)
+        return r
     except Exception as e:
         print("TG ERROR", e)
         return {}
@@ -60,7 +61,6 @@ def iniciar_partida(mesa_id):
     manos = {}
     for uid in jugadores:
         manos[str(uid)] = [fichas.pop() for _ in range(7)]
-    # Empieza el que tiene el doble 6, si no el que tiene mayor doble
     inicio = jugadores[0]
     for uid in jugadores:
         if [6,6] in manos[str(uid)]:
@@ -71,7 +71,7 @@ def iniciar_partida(mesa_id):
         "manos": manos,
         "mesa_fichas": [],
         "turno": inicio,
-        "turno_inicio": time.time(),  # ARREGLO 1: inicio del turno
+        "turno_inicio": time.time(),
         "extremo_izq": None,
         "extremo_der": None,
         "pasadas": 0,
@@ -80,12 +80,10 @@ def iniciar_partida(mesa_id):
     return PARTIDAS[mesa_id]
 
 def verificar_timeout(mesa_id):
-    """ARREGLO 1: Si pasan 30s sin jugar, pasa solo"""
     p = PARTIDAS.get(mesa_id)
     if not p or p["terminada"]:
         return p
     if time.time() - p["turno_inicio"] > 30:
-        # pasa turno
         idx = p["jugadores"].index(p["turno"])
         p["turno"] = p["jugadores"][(idx+1) % len(p["jugadores"])]
         p["turno_inicio"] = time.time()
@@ -100,7 +98,6 @@ def terminar_partida(mesa_id, tranca=False):
         return
     mesa = MESAS[mesa_id]
     apuesta = mesa["apuesta"]
-    # Ganador: el que se quedó sin fichas, o el de menos puntos si es tranca
     ganador = None
     menor = 999
     for uid in p["jugadores"]:
@@ -114,24 +111,20 @@ def terminar_partida(mesa_id, tranca=False):
             ganador = uid
     p["terminada"] = True
     p["ganador"] = ganador
-    # Paga: ganador se lleva apuesta * (jugadores-1)
     premio = apuesta * (len(p["jugadores"])-1)
     add_saldo(ganador, premio)
-    # ARREGLO 5: Expulsar al que no le alcanza para otra mano
     expulsados = []
     quedan = []
     for uid in p["jugadores"]:
         if uid == ganador:
             quedan.append(uid)
         else:
-            # ya le descontaron al entrar, ahora revisa si le queda para otra mano
             if saldo(uid) < apuesta:
                 expulsados.append(uid)
             else:
                 quedan.append(uid)
     mesa["jugadores"] = quedan
     p["expulsados"] = expulsados
-    # Si quedan 2 o más, la mesa queda lista, si no se limpia
     if len(quedan) < 2:
         mesa["jugadores"] = []
     return p
@@ -153,7 +146,8 @@ def estado():
         "mesas": [{"id": m["id"], "nombre": m["nombre"], "apuesta": m["apuesta"], "jugadores": len(m["jugadores"]), "max": 4} for m in MESAS.values()],
         "usuarios": USUARIOS,
         "tarjeta": TARJETA,
-        "movil": MOVIL_CONFIRMAR
+        "movil": MOVIL_CONFIRMAR,
+        "group_id": GROUP_ID
     })
 
 @app.route("/api/entrar_mesa", methods=["POST"])
@@ -172,11 +166,9 @@ def entrar_mesa():
         return jsonify({"ok": False, "msg": "Mesa llena"})
     if saldo(uid) < mesa["apuesta"]:
         return jsonify({"ok": False, "msg": "No tienes fichas suficientes para esta mesa. Recarga."})
-    # Descuenta apuesta al entrar
     USUARIOS[uid]["saldo"] -= mesa["apuesta"]
     mesa["jugadores"].append(uid)
     if len(mesa["jugadores"]) >= 2:
-        # Si no hay partida activa, empieza cuando hay 2+
         if mesa_id not in PARTIDAS or PARTIDAS[mesa_id].get("terminada"):
             iniciar_partida(mesa_id)
     return jsonify({"ok": True})
@@ -187,7 +179,6 @@ def api_mesa():
     uid = request.args.get("uid", "")
     p = PARTIDAS.get(mesa_id)
     if p:
-        # ARREGLO 1: revisa timeout cada vez que alguien pregunta
         verificar_timeout(mesa_id)
         p = PARTIDAS.get(mesa_id)
         tiempo_restante = max(0, 30 - int(time.time() - p["turno_inicio"])) if not p["terminada"] else 0
@@ -210,14 +201,12 @@ def jugar():
     p = PARTIDAS.get(mesa_id)
     if not p or p["terminada"]:
         return jsonify({"ok": False, "msg": "No hay partida"})
-    # ARREGLO 1: si se acabó el tiempo, ya pasó
     verificar_timeout(mesa_id)
     if str(p["turno"]) != uid:
         return jsonify({"ok": False, "msg": "No es tu turno"})
     mano = p["manos"].get(uid, [])
     if ficha not in mano and [ficha[1], ficha[0]] not in mano:
         return jsonify({"ok": False, "msg": "No tienes esa ficha"})
-    # Quitar ficha
     if ficha in mano:
         mano.remove(ficha)
     else:
@@ -275,28 +264,29 @@ def recargar():
     USUARIOS.setdefault(uid, {"nombre": nombre, "saldo": 0})
     pedido_id = f"REC-{int(time.time())}-{uid[-4:]}"
     PEDIDOS[pedido_id] = {"uid": uid, "cantidad": cantidad, "tipo": tipo, "nombre": nombre}
-    # ARREGLO 6: El callback lleva TODA la info, no depende de memoria
-    # confirmar|uid|cantidad|tipo|pedido_id
     callback = f"confirmar|{uid}|{cantidad}|{tipo}|{pedido_id}"
     callback_rech = f"rechazar|{uid}|{cantidad}|{tipo}|{pedido_id}"
     texto = f"🧾 NUEVO PEDIDO\n\n👤 {nombre}\n🆔 {uid}\n💰 {cantidad} fichas - {tipo}\n📋 {pedido_id}\n\nRevisa la transferencia a:\n💳 {TARJETA}\n📱 Confirmar: {MOVIL_CONFIRMAR}"
-    # Envía al grupo
-    if GROUP_ID:
-        tg("sendMessage", {"chat_id": GROUP_ID, "text": texto, "reply_markup": {"inline_keyboard": [[{"text": "✅ CONFIRMAR", "callback_data": callback}, {"text": "❌ RECHAZAR", "callback_data": callback_rech}]]}})
-    return jsonify({"ok": True, "pedido_id": pedido_id})
+    # SIEMPRE manda al grupo, con el ID fijo
+    r = tg("sendMessage", {"chat_id": GROUP_ID, "text": texto, "reply_markup": {"inline_keyboard": [[{"text": "✅ CONFIRMAR", "callback_data": callback}, {"text": "❌ RECHAZAR", "callback_data": callback_rech}]]}})
+    print("RECARGA ENVIADA A GRUPO", GROUP_ID, r)
+    return jsonify({"ok": True, "pedido_id": pedido_id, "tg": r})
 
-# ============ TELEGRAM WEBHOOK - ARREGLO 6 ============
+@app.route("/api/test_grupo")
+def test_grupo():
+    r = tg("sendMessage", {"chat_id": GROUP_ID, "text": "🔔 Prueba: el bot sí puede mandar al grupo privado."})
+    return jsonify({"group_id": GROUP_ID, "tg": r})
+
+# ============ TELEGRAM WEBHOOK ============
 @app.route("/webhook", methods=["POST"])
 def webhook():
     update = request.json or {}
-    # Callback del botón CONFIRMAR / RECHAZAR
     if "callback_query" in update:
         cq = update["callback_query"]
         data = cq.get("data", "")
         cb_id = cq.get("id")
         chat_id = cq.get("message", {}).get("chat", {}).get("id")
         msg_id = cq.get("message", {}).get("message_id")
-        # SIEMPRE responder al botón primero, para que nunca se quede en blanco
         try:
             tg("answerCallbackQuery", {"callback_query_id": cb_id, "text": "Procesando..."})
         except:
@@ -320,14 +310,12 @@ def webhook():
                         tg("sendMessage", {"chat_id": uid, "text": "❌ Tu recarga fue rechazada. Revisa la transferencia y vuelve a intentar."})
                     except:
                         pass
-                # Intenta editar, si falla manda mensaje nuevo (para que nunca se quede en blanco)
                 editado = False
                 if chat_id and msg_id:
                     r = tg("editMessageText", {"chat_id": chat_id, "message_id": msg_id, "text": nuevo_texto})
                     if r.get("ok"):
                         editado = True
                     else:
-                        # Si era foto, intenta editar caption
                         r2 = tg("editMessageCaption", {"chat_id": chat_id, "message_id": msg_id, "caption": nuevo_texto})
                         if r2.get("ok"):
                             editado = True
@@ -342,7 +330,6 @@ def webhook():
             if chat_id:
                 tg("sendMessage", {"chat_id": chat_id, "text": f"Error procesando: {e}"})
         return jsonify({"ok": True})
-
     if "message" in update:
         msg = update["message"]
         chat_id = msg.get("chat", {}).get("id")
@@ -359,7 +346,7 @@ def set_webhook():
     r = requests.get(f"{TELEGRAM_API}/setWebhook?url={url}")
     return jsonify(r.json())
 
-# ============ HTML - CON TODOS LOS ARREGLOS VISUALES ============
+# ============ HTML ============
 HTML = r"""
 <!DOCTYPE html>
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -367,27 +354,24 @@ HTML = r"""
 <style>
 *{box-sizing:border-box} body{margin:0;font-family:Arial;background:#0f3d2e;color:white}
 .top{background:#0a2a1f;padding:10px;display:flex;justify-content:space-between;align-items:center}
-.logo{font-weight:900;font-size:22px}
-/* ARREGLO 2: Ficha D chiquita y bonita */
-.chip-D{width:28px;height:28px;border-radius:50%;background:#d60000;border:2px dashed white;display:inline-flex;align-items:center;justify-content:center;font-weight:900;font-size:14px;color:white;box-shadow:0 0 5px rgba(0,0,0,.4)}
-.saldo{background:#ffd700;color:#000;padding:5px 10px;border-radius:20px;font-weight:900}
+.logo{font-weight:900;font-size:20px;display:flex;align-items:center;gap:6px}
+/* D ARREGLADA: circulo rojo simple, sin punteado, sin parecer poker */
+.chip-D{width:22px;height:22px;min-width:22px;border-radius:50%;background:#d60000;border:2px solid #fff;display:inline-flex;align-items:center;justify-content:center;font-weight:900;font-size:13px;color:white;line-height:1}
+.saldo{background:#ffd700;color:#000;padding:6px 10px;border-radius:20px;font-weight:900;display:flex;align-items:center;gap:5px}
 .mesas{padding:10px;display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .mesa-card{background:#1a5c42;padding:12px;border-radius:12px;text-align:center;cursor:pointer}
 .mesa-card b{font-size:20px}
-/* ARREGLO: Mesa rectangular madera */
 .mesa-juego{background:#7a4a1f;padding:10px;border-radius:12px;margin:10px}
 .pano{background:radial-gradient(circle,#1e9e5a,#0d5a2e);border-radius:10px;min-height:340px;padding:10px;position:relative;box-shadow:inset 0 0 30px rgba(0,0,0,.4)}
 .timer{position:absolute;top:8px;right:10px;background:#000;color:#ffd700;padding:5px 10px;border-radius:20px;font-weight:900;font-size:16px}
 .jugadores-top{display:flex;justify-content:space-around;font-size:12px;margin-bottom:8px}
-/* ARREGLO 3 y 4: Fichas originales chiquitas color marfil, con puntitos */
 .tablero{display:flex;flex-direction:column;align-items:center;gap:2px;min-height:200px;max-height:240px;overflow:auto}
-.ficha-domino{width:28px;height:52px;background:#f5e8c8;background:linear-gradient(180deg,#fdf6d8,#e8d9a8);border:1px solid #8a7a4a;border-radius:5px;display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 1px 3px rgba(0,0,0,.4);flex-shrink:0}
+.ficha-domino{width:28px;height:52px;background:linear-gradient(180deg,#fdf6d8,#e8d9a8);border:1px solid #8a7a4a;border-radius:5px;display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 1px 3px rgba(0,0,0,.4);flex-shrink:0}
 .ficha-domino.horizontal{width:52px;height:28px;flex-direction:row}
 .mitad{flex:1;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);width:100%;height:100%;padding:2px}
 .divisor{width:80%;height:1px;background:#8a7a4a}
 .ficha-domino.horizontal .divisor{width:1px;height:80%}
 .punto{width:5px;height:5px;background:#111;border-radius:50%;justify-self:center;align-self:center}
-/* Posiciones de puntitos */
 .punto.p1{grid-column:2;grid-row:2}
 .punto.p2a{grid-column:1;grid-row:1}.punto.p2b{grid-column:3;grid-row:3}
 .punto.p3a{grid-column:1;grid-row:1}.punto.p3b{grid-column:2;grid-row:2}.punto.p3c{grid-column:3;grid-row:3}
@@ -397,19 +381,33 @@ HTML = r"""
 .mi-mano{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin-top:10px}
 .mi-mano .ficha-domino{width:34px;height:62px;cursor:pointer}
 .mi-mano .ficha-domino.seleccionada{outline:3px solid #ffd700;transform:translateY(-6px)}
-.btn{background:#ffd700;color:#000;border:none;padding:10px 16px;border-radius:10px;font-weight:900;width:100%;margin-top:8px}
-.recarga{background:#fff3a0;color:#000;padding:10px;border-radius:10px;margin:10px;text-align:center}
-input{width:100%;padding:10px;border-radius:8px;border:none;margin:5px 0}
+.btn{background:#ffd700;color:#000;border:none;padding:11px 16px;border-radius:10px;font-weight:900;width:100%;margin-top:8px;font-size:16px}
+/* RECARGA CON APARTADOS SEPARADOS */
+.recarga-wrap{padding:10px;display:flex;flex-direction:column;gap:8px}
+.caja{background:#fff3a0;color:#111;border-radius:12px;padding:12px;text-align:center}
+.caja-blanca{background:#ffffff;color:#111;border-radius:10px;padding:10px;margin-top:6px}
+.caja-blanca small{color:#555;font-size:12px}
+.caja-blanca b.num{font-size:19px;letter-spacing:1px}
+input{width:100%;padding:11px;border-radius:8px;border:1px solid #ccc;margin:0;font-size:16px;text-align:center}
 .hidden{display:none}
 </style></head>
 <body>
 <div class="top"><div class="logo">🎲 CLUB DOMINÓ <span class="chip-D">D</span></div><div class="saldo">💰 <span id="saldo">0</span> <span class="chip-D">D</span></div></div>
 
 <div id="vista-lobby">
-<div class="recarga">💳 <b>Recargar - Tarjeta CUP:</b><br><b>9238-1299-7507-3018</b><br>📱 Móvil a confirmar: <b>55348244</b><br>
-<input id="cantRec" type="number" placeholder="Cantidad de fichas" value="100">
-<button class="btn" onclick="recargar()">ENVIAR</button>
-<div id="msgRec" style="font-size:13px;margin-top:5px"></div></div>
+<div class="recarga-wrap">
+  <div class="caja">
+    <div style="font-weight:900;font-size:16px">💳 RECARGAR</div>
+    <div class="caja-blanca"><small>Tarjeta CUP</small><br><b class="num">9238-1299-7507-3018</b></div>
+    <div class="caja-blanca"><small>📱 Móvil a confirmar</small><br><b class="num">55348244</b></div>
+  </div>
+  <div class="caja">
+    <div style="font-weight:900;margin-bottom:6px">Cantidad de fichas</div>
+    <input id="cantRec" type="number" placeholder="Ej: 100" value="100">
+    <button class="btn" onclick="recargar()">ENVIAR</button>
+    <div id="msgRec" style="font-size:13px;margin-top:6px"></div>
+  </div>
+</div>
 <div style="padding:0 10px"><b>Mesas - Elige una:</b></div>
 <div class="mesas" id="listaMesas"></div>
 </div>
@@ -432,7 +430,6 @@ localStorage.setItem("uid", UID);
 let NOMBRE = localStorage.getItem("nombre") || prompt("Tu nombre:") || "Jugador";
 localStorage.setItem("nombre", NOMBRE);
 let MESA = null, SEL = null, TIMER_INT = null;
-
 function puntosHTML(n){
   if(n==0) return '<div class="mitad"></div>';
   let map={1:['p1'],2:['p2a','p2b'],3:['p3a','p3b','p3c'],4:['p4a','p4b','p4c','p4d'],5:['p5a','p5b','p5c','p5d','p5e'],6:['p6a','p6b','p6c','p6d','p6e','p6f']};
@@ -441,7 +438,6 @@ function puntosHTML(n){
 function fichaHTML(f, horiz){
   return '<div class="ficha-domino '+(horiz?'horizontal':'')+'">'+puntosHTML(f[0])+'<div class="divisor"></div>'+puntosHTML(f[1])+'</div>';
 }
-
 async function cargar(){
   let r = await fetch('/api/estado?uid='+UID); let d = await r.json();
   document.getElementById('saldo').innerText = d.saldo;
@@ -470,7 +466,6 @@ async function actualizar(){
   if(!MESA) return;
   let r=await fetch('/api/mesa?mesa_id='+MESA+'&uid='+UID); let d=await r.json();
   document.getElementById('saldo').innerText=d.mi_saldo;
-  // ARREGLO 5: expulsado
   if(d.expulsado){ alert('Te quedaste sin fichas para esta mesa. La mesa te expulsó. Recarga para volver a jugar.'); salir(); return; }
   let p=d.partida;
   if(!p){ document.getElementById('tablero').innerHTML='<div style="text-align:center">Esperando jugadores...</div>'; return; }
@@ -489,7 +484,6 @@ function selFicha(i){
     let f=d.mi_mano[i]; SEL=f;
     document.querySelectorAll('#miMano > div').forEach(el=>el.classList.remove('seleccionada'));
     document.getElementById('f'+i).classList.add('seleccionada');
-    // Intenta jugar derecha, si no izquierda
     jugarLado('der');
   });
 }
@@ -497,7 +491,7 @@ async function jugarLado(lado){
   if(!SEL) return;
   let r=await fetch('/api/jugar',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({uid:UID,mesa_id:MESA,ficha:SEL,lado:lado})});
   let d=await r.json();
-  if(!d.ok && lado=='der'){ // intenta por el otro lado
+  if(!d.ok && lado=='der'){
     let r2=await fetch('/api/jugar',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({uid:UID,mesa_id:MESA,ficha:SEL,lado:'izq'})});
     let d2=await r2.json();
     if(!d2.ok) document.getElementById('msgJuego').innerText=d2.msg;
@@ -512,7 +506,6 @@ cargar();
 </script></body></html>
 """
 
-# ARREGLO NOT FOUND: cualquier dirección abre el juego, nunca más 404
 @app.route("/Cubadomino")
 @app.route("/cubadomino")
 @app.route("/Cubadomino/")
@@ -521,7 +514,6 @@ def cubadomino():
 
 @app.route("/<path:ruta_cualquiera>")
 def ruta_cualquiera(ruta_cualquiera):
-    # No interferir con api / webhook / set_webhook
     if ruta_cualquiera.startswith("api/") or ruta_cualquiera.startswith("webhook") or ruta_cualquiera.startswith("set_webhook"):
         return "Not Found", 404
     return HTML
