@@ -6,6 +6,8 @@ from flask import Flask, request, jsonify, send_from_directory
 
 app = Flask(__name__)
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "TU_BOT_TOKEN_AQUI")
 GROUP_ID = -1004353226044
 MIN_FICHAS = 5
@@ -51,7 +53,7 @@ def enviar_foto_telegram(photo_path, caption, pedido_id, es_retiro=False):
 
 @app.route("/")
 def index():
-    return send_from_directory(".", "index.html")
+    return send_from_directory(BASE_DIR, "index.html")
 
 @app.route("/api/me", methods=["POST"])
 def api_me():
