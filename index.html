@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Club de Dominó Cubano</title>
+<style>
+body{margin:0;background:#0a2e22;font-family:Arial;color:white}
+.header{background:#0e4d36;padding:15px;display:flex;justify-content:space-between;align-items:center;border-bottom:3px solid #d4af37}
+.header h1{color:#d4af37;margin:0;font-size:22px}
+.saldo{background:#000;padding:8px 15px;border:1px solid #d4af37;border-radius:8px}
+.saldo b{color:#fff;font-size:20px}
+.btn-recargar{background:#22c55e;color:#fff;border:none;padding:10px 18px;border-radius:8px;font-weight:bold}
+.lobby{padding:20px;padding-bottom:80px}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:15px;margin-top:15px}
+.card{background:#0b3d2c;border:1px solid #d4af37;border-radius:12px;padding:12px;text-align:center}
+.card h3{color:#facc15;margin:5px 0}
+.badge{background:#16a34a;font-size:12px;padding:4px 8px;border-radius:20px;display:inline-block}
+.domino{display:flex;justify-content:center;gap:4px;margin:10px 0}
+.tile{background:#fff;width:28px;height:52px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:18px}
+.btn-entrar{background:#22c55e;width:100%;padding:10px;border:none;border-radius:8px;color:white;font-weight:bold}
+.footer{position:fixed;bottom:0;left:0;right:0;background:#000;display:flex;justify-content:space-around;padding:12px;border-top:2px solid #d4af37}
+@media(max-width:800px){.grid{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<div class="header">
+<div><h1>CLUB DE DOMINÓ CUBANO</h1><div>LOBBY - MESAS DISPONIBLES</div></div>
+<div style="display:flex;gap:10px;align-items:center">
+<div class="saldo">Jugador: Carlos M.<br>SALDO <b>12,450 FICHAS</b></div>
+<button class="btn-recargar">+ RECARGAR</button>
+</div>
+</div>
+<div class="lobby">
+<h2>Lobby de Mesas</h2><div>Selecciona una mesa • Mesas en vivo • Personas reales • Juegan 2, 3 o 4</div>
+<div class="grid" id="mesas"></div>
+</div>
+<div class="footer"><span>🏠 Lobby</span><span>🃏 Mis Mesas</span><span>🏆 Clasificación</span><span>🛒 Tienda</span></div>
+<script>
+const apuestas=[5,5,10,10,20,20,50,50,100,100,500,500,1000,1000,2000,2000,5000,5000,100,500];
+let html="";
+apuestas.forEach((a,i)=>{
+html+=`<div class="card"><span class="badge">Mesas en vivo - Personas reales</span><h3>MESAS DE ${a} FICHAS</h3><div>Mesa #${1021+i}</div><div>2-4 jugadores • En vivo</div><div>Si hay 2, ya juega</div><div class="domino"><div class="tile">🔴</div><div class="tile">🔵</div><div class="tile">🟢</div><div class="tile">🟡</div></div><div>Apuesta: ${a} fichas</div><br><button class="btn-entrar">ENTRAR</button></div>`;
+});
+document.getElementById('mesas').innerHTML=html;
+</script>
+</body>
+</html>
