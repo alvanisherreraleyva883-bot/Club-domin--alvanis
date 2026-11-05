@@ -3,46 +3,190 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Club de Dominó Cubano</title>
+<title>Cubadomino</title>
 <style>
-body{margin:0;background:#0a2e22;font-family:Arial;color:white}
-.header{background:#0e4d36;padding:15px;display:flex;justify-content:space-between;align-items:center;border-bottom:3px solid #d4af37}
-.header h1{color:#d4af37;margin:0;font-size:22px}
-.saldo{background:#000;padding:8px 15px;border:1px solid #d4af37;border-radius:8px}
-.saldo b{color:#fff;font-size:20px}
-.btn-recargar{background:#22c55e;color:#fff;border:none;padding:10px 18px;border-radius:8px;font-weight:bold}
-.lobby{padding:20px;padding-bottom:80px}
-.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:15px;margin-top:15px}
-.card{background:#0b3d2c;border:1px solid #d4af37;border-radius:12px;padding:12px;text-align:center}
-.card h3{color:#facc15;margin:5px 0}
-.badge{background:#16a34a;font-size:12px;padding:4px 8px;border-radius:20px;display:inline-block}
-.domino{display:flex;justify-content:center;gap:4px;margin:10px 0}
-.tile{background:#fff;width:28px;height:52px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:18px}
-.btn-entrar{background:#22c55e;width:100%;padding:10px;border:none;border-radius:8px;color:white;font-weight:bold}
-.footer{position:fixed;bottom:0;left:0;right:0;background:#000;display:flex;justify-content:space-around;padding:12px;border-top:2px solid #d4af37}
-@media(max-width:800px){.grid{grid-template-columns:repeat(2,1fr)}}
+*{margin:0;padding:0;box-sizing:border-box;font-family:Arial,sans-serif}
+body{background:#0a3d24;color:#fff;padding-bottom:70px}
+.top{background:#06301d;padding:12px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:10}
+.top b{font-size:20px;letter-spacing:1px}
+.user-box{background:#000;border:1px solid #f5c518;border-radius:10px;padding:8px 12px;text-align:center;min-width:140px}
+.user-box span{font-size:12px;color:#ccc}
+.user-box b{font-size:20px;color:#f5c518;display:block}
+.btn-green{background:#22c55e;color:#fff;border:none;padding:10px 16px;border-radius:10px;font-weight:900;cursor:pointer}
+.hero{padding:14px}
+.hero h1{color:#f5c518;font-size:22px}
+.hero p{font-size:13px;opacity:.8}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:12px}
+.card{background:#0e4a2b;border:1px solid #1a6b3d;border-radius:16px;padding:12px;text-align:center}
+.card h3{color:#f5c518;margin-bottom:8px}
+.domino-row{display:flex;justify-content:center;gap:4px;margin:8px 0}
+.mini{width:26px;height:48px;background:#f5eeda;border-radius:6px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#111;font-weight:900;border:1px solid #999;font-size:10px}
+.card .info{font-size:13px;margin:6px 0}
+.hidden{display:none!important}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.8);display:flex;align-items:flex-end;justify-content:center;z-index:50}
+.modal-box{background:#fff;color:#111;width:100%;max-width:480px;border-radius:20px 20px 0 0;padding:18px;padding-bottom:80px;max-height:90vh;overflow:auto}
+.modal-box h2{font-size:20px;margin-bottom:4px}
+.modal-box p{font-size:14px;color:#555}
+.modal-box input{width:100%;padding:13px;border:1px solid #ddd;border-radius:10px;margin:10px 0;font-size:16px}
+.big-btn{width:100%;background:#22c55e;color:#fff;border:none;padding:15px;border-radius:12px;font-weight:900;font-size:16px;cursor:pointer;margin-top:8px}
+.close{float:right;font-size:22px;cursor:pointer}
+.fichas-line{background:#f0fdf4;border:1px solid #bbf7d0;padding:10px;border-radius:10px;text-align:center;font-weight:800;color:#111}
+.mesa-wrap{padding:12px}
+.table{position:relative;background:#0e5a33;border:10px solid #6b3a1a;border-radius:50%;aspect-ratio:9/13;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.chain{display:flex;flex-direction:column;gap:3px;align-items:center}
+.ficha{width:54px;height:28px;background:#f5eeda;border-radius:6px;display:flex;align-items:center;justify-content:center;gap:6px;border:1px solid #888}
+.ficha .mid{width:1px;height:22px;background:#aaa}
+.seat{position:absolute;background:#08331e;border:2px solid #f5c518;border-radius:12px;padding:8px 10px;text-align:center;min-width:88px;font-size:12px}
+.seat b{display:block;font-size:13px}
+.seat.top{top:12px;left:50%;transform:translateX(-50%)}
+.seat.right{right:8px;top:50%;transform:translateY(-50%)}
+.seat.bottom{bottom:12px;left:50%;transform:translateX(-50%)}
+.seat.left{left:8px;top:50%;transform:translateY(-50%)}
+.seat.empty{background:#1a1a1a;border-style:dashed}
+.seat.empty button{background:#f5c518;border:none;padding:6px 10px;border-radius:8px;font-weight:900;margin-top:4px;cursor:pointer}
+.prize{position:absolute;top:10px;right:14px;background:#000;padding:6px 10px;border-radius:20px;font-weight:900;color:#f5c518;font-size:13px}
+.bottom{position:fixed;bottom:0;left:0;right:0;background:#000;display:flex;justify-content:space-around;padding:12px;font-size:13px}
+.bottom span{cursor:pointer}
+.bottom b{color:#f5c518}
 </style>
 </head>
 <body>
-<div class="header">
-<div><h1>CLUB DE DOMINÓ CUBANO</h1><div>LOBBY - MESAS DISPONIBLES</div></div>
-<div style="display:flex;gap:10px;align-items:center">
-<div class="saldo">Jugador: Carlos M.<br>SALDO <b>12,450 FICHAS</b></div>
-<button class="btn-recargar">+ RECARGAR</button>
+<div class="top">
+  <div><b>Cubadomino</b><div style="font-size:11px;opacity:.7">LOBBY - MESAS DISPONIBLES</div></div>
+  <div style="display:flex;gap:8px;align-items:center">
+    <div class="user-box"><span id="nombreUser">...</span><b id="fichasUser">0</b><span>FICHAS</span></div>
+    <button class="btn-green" onclick="abrirRecarga()">+ RECARGAR</button>
+  </div>
 </div>
+<div class="hero"><h1>CLUB DE DOMINÓ CUBANO</h1><p>Elige tu mesa y siéntate a jugar</p></div>
+<div id="lobby" class="grid"></div>
+<div id="mesaView" class="mesa-wrap hidden">
+  <button onclick="volver()" style="background:#fff;border:none;padding:8px 14px;border-radius:20px;font-weight:800;margin-bottom:10px;cursor:pointer">← Volver</button>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><b id="tituloMesa">Mesa de 5 fichas</b><span id="jugadoresMesa">0 de 4</span></div>
+  <div class="table">
+    <div class="prize">🏆 <span id="premioMesa">5</span></div>
+    <div class="seat top"><b id="pTop">Esperando...</b><span>Arriba</span></div>
+    <div class="seat right"><b id="pRight">Esperando...</b><span>Derecha</span></div>
+    <div class="seat bottom"><b id="pYou">Tú</b><span>Abajo</span></div>
+    <div class="seat left empty" id="seatVacio"><b>Asiento vacío</b><button onclick="sentarse()">Sentarse</button><div style="font-size:11px;margin-top:4px">Si tienes fichas</div></div>
+    <div class="chain" id="chain"></div>
+  </div>
+  <button class="big-btn" onclick="jugarMano()">JUGAR MANO</button>
+  <p style="text-align:center;font-size:13px;margin-top:8px;opacity:.8" id="estadoMesa">Esperando jugadores...</p>
 </div>
-<div class="lobby">
-<h2>Lobby de Mesas</h2><div>Selecciona una mesa • Mesas en vivo • Personas reales • Juegan 2, 3 o 4</div>
-<div class="grid" id="mesas"></div>
+<div id="modalRecarga" class="modal hidden">
+  <div class="modal-box">
+    <span class="close" onclick="cerrarTodo()">×</span>
+    <h2>Recargar Fichas</h2>
+    <p><b>1 ficha = 1 CUP</b></p>
+    <div class="fichas-line">Fichas: <span id="fichasModal">0</span></div>
+    <label style="font-size:13px">Cantidad de fichas (mínimo 5)</label>
+    <input type="number" id="cantRecarga" min="5" value="5">
+    <div style="font-size:14px;font-weight:800">Total a pagar: <span id="totalPagar">5 CUP</span></div>
+    <label style="font-size:13px">Tu número de móvil</label>
+    <input id="movilRecarga" placeholder="Ej: 5XXXXXXX">
+    <label style="font-size:13px">Captura del pago (Transfermóvil / EnZona)</label>
+    <input type="file" id="captura" accept="image/*">
+    <button class="big-btn" onclick="enviarRecarga()">ENVIAR A TELEGRAM</button>
+    <p style="text-align:center;margin-top:8px;font-size:12px">Se envía al grupo privado de Telegram. Cuando el admin pulsa ✅ CONFIRMAR, tus fichas se acreditan solas.</p>
+  </div>
 </div>
-<div class="footer"><span>🏠 Lobby</span><span>🃏 Mis Mesas</span><span>🏆 Clasificación</span><span>🛒 Tienda</span></div>
+<div id="modalRetiro" class="modal hidden">
+  <div class="modal-box">
+    <span class="close" onclick="cerrarTodo()">×</span>
+    <h2>Retirar Fichas</h2>
+    <p><b>1 ficha = 1 CUP</b></p>
+    <div class="fichas-line">Fichas: <span id="fichasRetiro">0</span></div>
+    <input type="number" id="cantRetiro" min="5" value="5" placeholder="Fichas a retirar">
+    <input id="tarjetaRetiro" placeholder="Número de tarjeta CUP">
+    <input id="movilRetiro" placeholder="Móvil para confirmar">
+    <button class="big-btn" style="background:#f59e0b" onclick="enviarRetiro()">SOLICITAR RETIRO</button>
+    <p style="text-align:center;font-size:12px;margin-top:8px">Cuando el admin confirma en Telegram, se te descuentan solas.</p>
+  </div>
+</div>
+<div class="bottom"><span>🏠 <b>Lobby</b></span><span onclick="abrirRecarga()">🛒 Recargar</span><span onclick="abrirRetiro()">💸 Retirar</span><span onclick="cambiarNombre()">👤 Perfil</span></div>
 <script>
-const apuestas=[5,5,10,10,20,20,50,50,100,100,500,500,1000,1000,2000,2000,5000,5000,100,500];
-let html="";
-apuestas.forEach((a,i)=>{
-html+=`<div class="card"><span class="badge">Mesas en vivo - Personas reales</span><h3>MESAS DE ${a} FICHAS</h3><div>Mesa #${1021+i}</div><div>2-4 jugadores • En vivo</div><div>Si hay 2, ya juega</div><div class="domino"><div class="tile">🔴</div><div class="tile">🔵</div><div class="tile">🟢</div><div class="tile">🟡</div></div><div>Apuesta: ${a} fichas</div><br><button class="btn-entrar">ENTRAR</button></div>`;
-});
-document.getElementById('mesas').innerHTML=html;
+let userId = localStorage.getItem('cuba_user_id');
+if(!userId){ userId = 'u_'+Date.now(); localStorage.setItem('cuba_user_id', userId); }
+let userNombre = localStorage.getItem('cuba_nombre');
+if(!userNombre){ userNombre = prompt("¿Cómo te llamas? Tu usuario real"); if(!userNombre) userNombre="Jugador"; localStorage.setItem('cuba_nombre', userNombre); }
+let user = {id:userId, nombre:userNombre, fichas:0};
+let mesas = [];
+let mesaActual = null;
+async function sync(){
+  try{
+    let r = await fetch('/api/me', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id:user.id, nombre:user.nombre})});
+    let d = await r.json(); user = d.user;
+    let r2 = await fetch('/api/mesas'); mesas = await r2.json();
+    render();
+  }catch(e){}
+}
+function render(){
+  document.getElementById('nombreUser').textContent = user.nombre;
+  document.getElementById('fichasUser').textContent = user.fichas.toLocaleString();
+  document.getElementById('fichasModal').textContent = user.fichas;
+  document.getElementById('fichasRetiro').textContent = user.fichas;
+  let html='';
+  mesas.forEach(m=>{
+    html+=`<div class="card"><h3>MESA DE ${m.apuesta} FICHAS</h3><div class="domino-row"><div class="mini">6 | 6</div><div class="mini">5 | 3</div><div class="mini">2 | 0</div></div><div class="info"><b>${m.jugadores.length} de 4</b> • ${m.jugadores.length>=4?'Ronda activa':'Esperando'}<br>Apuesta: ${m.apuesta} fichas</div><button class="btn-green" style="width:100%" onclick="entrarMesa(${m.id})">ENTRAR</button></div>`;
+  });
+  document.getElementById('lobby').innerHTML=html;
+  if(mesaActual){
+    let m = mesas.find(x=>x.id===mesaActual);
+    if(m){
+      document.getElementById('tituloMesa').textContent = `Mesa de ${m.apuesta} fichas`;
+      document.getElementById('premioMesa').textContent = m.apuesta;
+      document.getElementById('jugadoresMesa').textContent = `${m.jugadores.length} de 4`;
+      document.getElementById('pTop').textContent = m.jugadores[1]?.nombre || 'Esperando...';
+      document.getElementById('pRight').textContent = m.jugadores[2]?.nombre || 'Esperando...';
+      document.getElementById('pYou').textContent = m.jugadores[0]?.nombre || 'Tú';
+      document.getElementById('seatVacio').style.display = m.jugadores.length>=4 ? 'none':'block';
+      document.getElementById('estadoMesa').textContent = m.jugadores.length<2 ? 'Esperando jugadores...' : 'Listo para jugar';
+    }
+  }
+  let chain = document.getElementById('chain');
+  if(chain){
+    let fichas = [[6,6],[6,5],[5,3],[3,2],[2,0],[0,4],[4,1]];
+    chain.innerHTML = fichas.map(f=>`<div class="ficha"><span>${'•'.repeat(f[0]||1)}</span><div class="mid"></div><span>${'•'.repeat(f[1]||1)}</span></div>`).join('');
+  }
+}
+function entrarMesa(id){ mesaActual=id; document.getElementById('lobby').classList.add('hidden'); document.getElementById('mesaView').classList.remove('hidden'); sync(); }
+function volver(){ document.getElementById('mesaView').classList.add('hidden'); document.getElementById('lobby').classList.remove('hidden'); }
+async function sentarse(){
+  let m = mesas.find(x=>x.id===mesaActual);
+  if(user.fichas < m.apuesta){ alert('No tienes fichas suficientes. Recarga mínimo 5.'); abrirRecarga(); return; }
+  let r = await fetch('/api/sentarse', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({user_id:user.id, mesa_id:mesaActual})});
+  let d = await r.json(); if(!d.ok) alert(d.error); else sync();
+}
+function jugarMano(){ alert('Mano jugada - la lógica de juego va aquí'); }
+function abrirRecarga(){ document.getElementById('modalRecarga').classList.remove('hidden'); }
+function abrirRetiro(){ document.getElementById('modalRetiro').classList.remove('hidden'); }
+function cerrarTodo(){ document.querySelectorAll('.modal').forEach(e=>e.classList.add('hidden')); }
+function cambiarNombre(){ let n=prompt("Tu nombre real:", user.nombre); if(n){ user.nombre=n; localStorage.setItem('cuba_nombre', n); sync(); } }
+document.getElementById('cantRecarga').addEventListener('input', e=>{ document.getElementById('totalPagar').textContent = (parseInt(e.target.value)||0)+' CUP'; });
+async function enviarRecarga(){
+  let cant = parseInt(document.getElementById('cantRecarga').value);
+  if(!cant || cant<5) return alert('Mínimo 5 fichas');
+  let movil = document.getElementById('movilRecarga').value;
+  if(!movil) return alert('Pon tu móvil');
+  let file = document.getElementById('captura').files[0];
+  let fd = new FormData();
+  fd.append('user_id', user.id); fd.append('cantidad', cant); fd.append('movil', movil);
+  if(file) fd.append('captura', file);
+  let r = await fetch('/api/recarga', {method:'POST', body:fd});
+  let d = await r.json(); if(d.ok){ alert('Enviado a Telegram. Cuando el admin pulse CONFIRMAR, se te acreditan solas.'); cerrarTodo(); } else alert(d.error);
+}
+async function enviarRetiro(){
+  let cant = parseInt(document.getElementById('cantRetiro').value);
+  if(!cant || cant<5) return alert('Mínimo 5 fichas');
+  if(cant>user.fichas) return alert('No tienes tantas fichas');
+  let tarjeta=document.getElementById('tarjetaRetiro').value, movil=document.getElementById('movilRetiro').value;
+  if(!tarjeta||!movil) return alert('Pon tarjeta y móvil');
+  let r = await fetch('/api/retiro', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({user_id:user.id, cantidad:cant, tarjeta, movil})});
+  let d = await r.json(); if(d.ok){ alert('Solicitud enviada a Telegram. Cuando el admin confirme, se te descuentan solas.'); cerrarTodo(); } else alert(d.error);
+}
+sync();
+setInterval(sync, 3000);
 </script>
 </body>
 </html>
