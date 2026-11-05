@@ -33,7 +33,6 @@ def tg(method, data):
 
 def tg_foto(chat_id, caption, foto_b64):
     try:
-        # foto_b64 viene como data:image/jpeg;base64,....
         if "," in foto_b64:
             foto_b64 = foto_b64.split(",",1)[1]
         img = base64.b64decode(foto_b64)
@@ -240,7 +239,6 @@ def pasar():
         terminar_partida(mesa_id, tranca=True)
     return jsonify({"ok": True})
 
-# NUEVO: RECARGA AUTOMATICA - llega captura al grupo y se acredita en el momento
 @app.route("/api/recargar", methods=["POST"])
 def recargar():
     d = request.json
@@ -249,7 +247,6 @@ def recargar():
     USUARIOS.setdefault(uid, {"nombre": nombre, "saldo": 0})
     USUARIOS[uid]["nombre"] = nombre
     pedido_id = f"REC-{int(time.time())}-{uid[-4:]}"
-    # ACREDITA EN EL MISMO MOMENTO, no espera aprobar
     nuevo = add_saldo(uid, cantidad)
     caption = f"✅ RECARGA AUTO-ACREDITADA\n\n👤 {nombre}\n🆔 {uid}\n💰 {cantidad} fichas - CUP\n📋 {pedido_id}\n💰 Nuevo saldo: {nuevo}\n\nTarjeta: {TARJETA}"
     if foto:
@@ -258,7 +255,6 @@ def recargar():
         tg("sendMessage", {"chat_id": GROUP_ID, "text": caption + "\n\n⚠️ Sin captura adjunta"})
     return jsonify({"ok": True, "pedido_id": pedido_id, "nuevo_saldo": nuevo})
 
-# NUEVO: RETIRO AUTOMATICO - descuenta en el momento y avisa al grupo
 @app.route("/api/retirar", methods=["POST"])
 def retirar():
     d = request.json
@@ -276,7 +272,6 @@ def retirar():
 
 @app.route("/webhook", methods=["POST"])
 def webhook():
-    # Ya no se usa CONFIRMAR, el grupo solo recibe avisos. Lo dejamos por si llega algo viejo.
     return jsonify({"ok": True})
 
 @app.route("/set_webhook")
@@ -338,6 +333,7 @@ input{width:100%;padding:11px;border-radius:8px;border:1px solid #ccc;font-size:
 .hidden{display:none}
 .modal{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.85);display:flex;align-items:center;justify-content:center;z-index:99;padding:20px}
 .modal-box{background:#fff;color:#111;border-radius:14px;padding:18px;width:100%;max-width:340px;text-align:center}
+.modal.hidden{display:none !important}
 </style></head>
 <body>
 <div id="modalNombre" class="modal hidden"><div class="modal-box"><h3 style="margin:0">🎲 Bienvenido a Club Dominó</h3><p>Escribe tu nombre para jugar:</p><input id="inputNombre" placeholder="Tu nombre" style="text-align:left"><button class="btn" onclick="guardarNombre()">ENTRAR A JUGAR</button></div></div>
