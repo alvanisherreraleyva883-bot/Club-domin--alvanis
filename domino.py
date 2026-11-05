@@ -141,6 +141,10 @@ def terminar_partida(mesa_id, tranca=False):
 def index():
     return HTML
 
+@app.errorhandler(404)
+def not_found_404(e):
+    return HTML
+
 @app.route("/api/estado")
 def estado():
     uid = request.args.get("uid", "")
@@ -507,6 +511,20 @@ async function pasar(){
 cargar();
 </script></body></html>
 """
+
+# ARREGLO NOT FOUND: cualquier dirección abre el juego, nunca más 404
+@app.route("/Cubadomino")
+@app.route("/cubadomino")
+@app.route("/Cubadomino/")
+def cubadomino():
+    return HTML
+
+@app.route("/<path:ruta_cualquiera>")
+def ruta_cualquiera(ruta_cualquiera):
+    # No interferir con api / webhook / set_webhook
+    if ruta_cualquiera.startswith("api/") or ruta_cualquiera.startswith("webhook") or ruta_cualquiera.startswith("set_webhook"):
+        return "Not Found", 404
+    return HTML
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
